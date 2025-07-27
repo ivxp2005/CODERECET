@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ESP32 Sensor Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    table { border-collapse: collapse; width: 100%; max-width: 400px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>ESP32 Sensor Dashboard</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Value</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody id="data-table">
+      <tr><td colspan="3">Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <h2>ESP32 Leak Sensor Value</h2>
+  <p>Sensor Value: <span id="value">--</span></p>
+  <p>Last Updated: <span id="time">--</span></p>
+  <p id="leak-warning" style="color: red; font-weight: bold;"></p>
+  <script>
+    async function fetchData() {
+      const res = await fetch('/api/data');
+      const data = await res.json();
+      const tbody = document.getElementById('data-table');
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${row.id}</td><td>${row.value}</td><td>${row.timestamp}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    fetchData();
+    setInterval(fetchData, 2000); // Poll every 2 seconds
+
+    async function fetchSensorStatus() {
+      try {
+        const res = await fetch("http://192.168.242.192:5000/api/status");
+        const data = await res.json();
+
+        document.getElementById("value").innerText = data.sensor_value ?? "--";
+        document.getElementById("time").innerText = data.timestamp ?? "--";
+        const warning = document.getElementById("leak-warning");
+        if (data.sensor_value !== null && data.sensor_value > 300) {
+          warning.innerText = "Leak Detected!";
+        } else {
+          warning.innerText = "";
+        }
+      } catch (err) {
+        document.getElementById("leak-warning").innerText = "Error fetching data";
+        console.error("Error:", err);
+      }
+    }
+
+    setInterval(fetchSensorStatus, 3000); // refresh every 3 sec
+  </script>
+</body>
+</html> 
